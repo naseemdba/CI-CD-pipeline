@@ -83,7 +83,7 @@ jobs:
           server_port: 587
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          from: ${{ secrets.MAIL_USERNAME }}
+          from: "naseemdba@gmail.com"
           to: ${{ secrets.NOTIFY_EMAIL }}
           subject: "Pipeline Success"
           body: |
@@ -104,7 +104,7 @@ jobs:
           server_port: 587
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          from: ${{ secrets.MAIL_USERNAME }}
+          from: "naseemdba@gmail.com"
           to: ${{ secrets.NOTIFY_EMAIL }}
           subject: "Pipeline Failed"
           body: |

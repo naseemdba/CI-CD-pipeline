@@ -90,6 +90,7 @@ jobs:
           server_port: 587
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
+          from: ${{ secrets.MAIL_USERNAME }}
           to: ${{ secrets.MAIL_RECIPIENT }}
           subject: "Pipeline Success"
           body: |
@@ -111,6 +112,7 @@ jobs:
           server_port: 587
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
+          from: ${{ secrets.MAIL_USERNAME }}
           to: ${{ secrets.MAIL_RECIPIENT }}
           subject: "Pipeline Failed"
           body: |
@@ -119,4 +121,4 @@ jobs:
             Failure Summary:
             - Commit SHA: ${{ github.sha }}
             - Branch: ${{ github.ref_name }}
-            - Pipeline Run Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            - Pipeline Run Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }

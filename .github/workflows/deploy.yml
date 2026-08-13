@@ -92,20 +92,17 @@ jobs:
             echo "Health check passed!"
 
       # 7. Email Notification - SUCCESS
-      - name: Send Success Email
-        if: success()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          secure: true
-          username: ${{ secrets.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "[SUCCESS] Deployment Pipeline Passed - Commit ${{ github.sha }}"
-          to: ${{ secrets.MAIL_RECIPIENT }}
-          from: GitHub Actions CI/CD
-          body: |
-            The deployment pipeline succeeded!
+      - name: Send Failure Email
+  if: failure()
+  uses: dawidd6/action-send-mail@v3
+  with:
+    server_address: smtp.gmail.com
+    server_port: 587
+    username: ${{ secrets.SMTP_USER }}
+    password: ${{ secrets.SMTP_PASS }}
+    to: ${{ secrets.NOTIFY_EMAIL }}
+    subject: "Pipeline Failed"
+    body: "The CI/CD pipeline has failed."
             
             Build Details:
             - Commit SHA: ${{ github.sha }}

@@ -82,43 +82,44 @@ jobs:
             echo "Health check passed!"
 
       # 7. Email Notification - SUCCESS
-      - name: Send Success Email
-  if: success()
-  uses: dawidd6/action-send-mail@v3
-  with:
-    server_address: smtp.gmail.com
-    server_port: 587
-    username: ${{ secrets.SMTP_USER }}
-    password: ${{ secrets.SMTP_PASS }}
-    from: ${{ secrets.SMTP_USER }}
-    to: ${{ secrets.NOTIFY_EMAIL }}
-    subject: "Pipeline Success"
-    body: |
-      The CI/CD pipeline completed successfully.
+        - name: Send Success Email
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+         server_address: smtp.gmail.com
+         server_port: 587
+         username: ${{ secrets.SMTP_USER }}
+         password: ${{ secrets.SMTP_PASS }}
+         from: ${{ secrets.SMTP_USER }}
+         to: ${{ secrets.NOTIFY_EMAIL }}
+         subject: "Pipeline Success"
+         body: |
+          The CI/CD pipeline completed successfully.
 
-      Build Details:
-      - Commit SHA: ${{ github.sha }}
-      - Branch: ${{ github.ref_name }}
-      - Docker Image Tag: ${{ github.sha }}
-      - Target EC2 Host: ${{ secrets.EC2_HOST }}
-      - Pipeline Run Link: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+         Build Details:
+         - Commit SHA: ${{ github.sha }}
+         - Branch: ${{ github.ref_name }}
+         - Docker Image Tag: ${{ github.sha }}
+         - Target EC2 Host: ${{ secrets.EC2_HOST }}
+         - Pipeline Run Link: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
 
       # 8. Email Notification - FAILURE
       - name: Send Failure Email
-  if: failure()
-  uses: dawidd6/action-send-mail@v3
-  with:
-    server_address: smtp.gmail.com
-    server_port: 587
-    username: ${{ secrets.SMTP_USER }}
-    password: ${{ secrets.SMTP_PASS }}
-    from: ${{ secrets.SMTP_USER }}
-    to: ${{ secrets.NOTIFY_EMAIL }}
-    subject: "Pipeline Failed"
-    body: |
-      The CI/CD pipeline has failed.
+       if: failure()
+       uses: dawidd6/action-send-mail@v3
+       with:
+       server_address: smtp.gmail.com
+       server_port: 587
+       username: ${{ secrets.SMTP_USER }}
+       password: ${{ secrets.SMTP_PASS }}
+       from: ${{ secrets.SMTP_USER }}
+       to: ${{ secrets.NOTIFY_EMAIL }}
+       subject: "Pipeline Failed"
+       body: |
+        The CI/CD pipeline has failed.
 
-      Failure Summary:
-      - Commit SHA: ${{ github.sha }}
-      - Branch: ${{ github.ref_name }}
-      - Pipeline Run Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        Failure Summary:
+        - Commit SHA: ${{ github.sha }}
+        - Branch: ${{ github.ref_name }}
+        - Pipeline Run Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}

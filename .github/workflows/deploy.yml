@@ -1,0 +1,138 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Checkout Code
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Setup Python & Install Dependencies
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        id: install_deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 3. Test (pytest Gate)
+      - name: Run Pytest
+        id: test
+        run: |
+          pytest
+
+      # 4. AWS Authentication
+      - name: Configure AWS Credentials
+        id: aws_login
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login_ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # 5. Build & Push Docker Image
+      - name: Build & Push Docker Image
+        id: build_push
+        env:
+          ECR_REGISTRY: ${{ steps.login_ecr.outputs.registry }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+      # 6. Deploy to EC2 & Health Check Gate
+      - name: Deploy to EC2
+        id: deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            ECR_REGISTRY="${{ steps.login_ecr.outputs.registry }}"
+            
+            # Authenticate Docker on EC2 to ECR
+            aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY
+            
+            # Pull new image
+            docker pull $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+            
+            # Stop and remove old container if it exists
+            docker stop flask-app || true
+            docker rm flask-app || true
+            
+            # Run new container
+            docker run -d --name flask-app -p 5000:5000 $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+            
+            # Health check gate
+            sleep 5
+            HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/health)
+            if [ "$HEALTH_STATUS" -ne 200 ]; then
+              echo "Health check failed with status $HEALTH_STATUS"
+              exit 1
+            fi
+            echo "Health check passed!"
+
+      # 7. Email Notification - SUCCESS
+      - name: Send Success Email
+        if: success()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "[SUCCESS] Deployment Pipeline Passed - Commit ${{ github.sha }}"
+          to: ${{ secrets.MAIL_RECIPIENT }}
+          from: GitHub Actions CI/CD
+          body: |
+            The deployment pipeline succeeded!
+            
+            Build Details:
+            - Commit SHA: ${{ github.sha }}
+            - Branch: ${{ github.ref_name }}
+            - Docker Image Tag: ${{ github.sha }}
+            - Target EC2 Host: ${{ secrets.EC2_HOST }}
+            - Pipeline Run Link: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      # 8. Email Notification - FAILURE
+      - name: Send Failure Email
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "[FAILURE] Deployment Pipeline Failed - Commit ${{ github.sha }}"
+          to: ${{ secrets.MAIL_RECIPIENT }}
+          from: GitHub Actions CI/CD
+          body: |
+            The deployment pipeline failed!
+            
+            Failure Summary:
+            - Failed Stage: ${{ steps.test.outcome == 'failure' && 'Test (pytest)' || steps.build_push.outcome == 'failure' && 'Build/Push Image' || steps.deploy.outcome == 'failure' && 'Deploy to EC2/Health Check' || 'Pipeline Execution' }}
+            - Commit SHA: ${{ github.sha }}
+            - Branch: ${{ github.ref_name }}
+            - Pipeline Run/Logs Link: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            

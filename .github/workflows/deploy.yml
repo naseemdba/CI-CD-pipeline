@@ -12,7 +12,7 @@ env:
 
 jobs:
   pipeline:
-    runs-on: Amazon Linux 2023
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Code

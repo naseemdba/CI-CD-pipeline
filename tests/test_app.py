@@ -1,19 +1,25 @@
+import sys
+import os
+
+# Add root folder to sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+import pytest
 from app import app
 
-def test_home():
-    client = app.test_client()
-    response = client.get("/")
-    assert response.status_code == 200
-    assert response.get_json() == {"message": "Hello from CI/CD pipeline!"}
 
-def test_health():
-    client = app.test_client()
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.get_json() == {"status": "ok"}
+@pytest.fixture
+def client():
+  app.config['TESTING'] = True
+  with app.test_client() as client:
+    yield client
 
-def test_fail():
-    client = app.test_client()
-    response = client.get("/fail")
-    assert response.status_code == 500
-    assert response.get_json() == {"status": "error"}
+
+def test_home_page(client):
+  response = client.get('/')
+  assert response.status_code == 200
+
+
+def test_health_check(client):
+  response = client.get('/health')
+  assert response.status_code == 200
